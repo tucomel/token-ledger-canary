@@ -11,7 +11,7 @@ test('settings changes win over a stale read, update pricing immediately, and pr
   const home = await mkdtemp(join(tmpdir(), 'token-ledger-settings-'));
   const oldHome = process.env.PASEO_HOME;
   process.env.PASEO_HOME = home;
-  const dir = join(home, 'plugins/token-ledger');
+  const dir = join(home, 'plugins/token-ledger-canary');
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, 'pricing.json'), JSON.stringify({ version: 1, currency: 'USD', prices: [{ model: 'custom', tiers: [{ input: 9, cacheRead: 1, output: 20 }] }] }));
   await writeFile(join(dir, 'openrouter-pricing.json'), JSON.stringify({ fetchedAt: new Date().toISOString(), prices: [{ id: 'remote', prompt: 1, completion: 2, cacheRead: 0.1 }] }));

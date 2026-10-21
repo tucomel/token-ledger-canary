@@ -9,7 +9,7 @@ test('pricing serves local rates during network refresh, prices each request, an
   const home = await mkdtemp(join(tmpdir(), 'token-ledger-pricing-'));
   const previousHome = process.env.PASEO_HOME;
   process.env.PASEO_HOME = home;
-  const dir = join(home, 'plugins', 'token-ledger');
+  const dir = join(home, 'plugins', 'token-ledger-canary');
   await mkdir(dir, { recursive: true });
   const prices = { version: 1, currency: 'USD', prices: [{ model: 'test', tiers: [
     { upToInputTokens: 100, input: 1, cacheRead: 0.1, cacheWrite: 2, output: 2 },

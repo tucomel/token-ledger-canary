@@ -13,13 +13,17 @@ import {
   appendRecord,
   lastRecordForAgent,
   loadStore,
+  upsertTranscriptRecords,
 } from "./store.ts";
+import { CodexTranscripts, overlaps } from './codex-transcripts.ts';
 
 import { readModel, summaryFromRows, EMPTY_SUMMARY } from "./read-model.ts";
 import { Catalog } from "./catalog.ts";
 import { TimelinePublisher } from "./timeline.ts";
 import { TimelineSubscriptions } from './subscriptions.ts';
 const catalog = new Catalog();
+const transcripts = new CodexTranscripts();
+const transcriptLive = new Map<string, { active: TurnRecord | null; latestEndedAt: string | null }>();
 const publisher = new TimelinePublisher();
 const liveRecords = new Set<string>();
 
@@ -51,9 +55,14 @@ async function drainRecords(): Promise<void> {
   const batch = [...pendingRecords.values()];
   await saveJournal(agents, pendingRecords);
   for (const record of batch) {
-    await appendRecord(record);
+    let corrected = record;
+    try {
+      const native = await transcripts.read(record.agentId);
+      corrected = native?.records.find(next => overlaps(record, next)) ?? record;
+    } catch (error) { console.error('token-ledger-canary: native usage read failed; retaining telemetry', error); }
+    await appendRecord(corrected);
     pendingRecords.delete(record.id);
-    if (liveRecords.delete(record.id) && trackerApi && !stopped) publisher.publish(trackerApi, record);
+    if (liveRecords.delete(record.id) && trackerApi && !stopped) publisher.publish(trackerApi, corrected);
   }
   await saveJournal(agents, pendingRecords);
 }
@@ -114,6 +123,7 @@ function retireAgent(id: string, gap = false): void {
 }
 function watchAgent(agent: AgentSnapshotLike, restored = false): void {
   if (stopped) return;
+  if (agent.provider) transcripts.note({ ...agent, provider: agent.provider });
   if (recovered.delete(agent.id) && !agent.activeTurn && stateFor(agent.id).open) {
     const record = closeTurn(agent.id, stateFor(agent.id), "canceled", null, new Date().toISOString());
     if (record) record.source = `recovered_interruption:${record.source}`;
@@ -180,6 +190,7 @@ export function ensureTracker(paseo: PaseoApi): Promise<void> {
       error: (id, error) => console.error('token-ledger: timeline subscription failed', id, error),
     });
     const applyAgent = (agent: PaseoAgent, restored = false) => {
+      transcripts.note(agent);
       restored = needsReconcile.delete(agent.id) || restored;
       bump(agent.id);
       catalog.note(agent);
@@ -246,10 +257,43 @@ export function stopTracker(): Promise<void> {
   return stopPromise;
 }
 
+async function reconcileTranscripts(agentIds: string[]): Promise<void> {
+  for (const agentId of agentIds) {
+    try {
+      const sessionId = transcripts.sessionId(agentId);
+      const native = await transcripts.read(agentId);
+      if (native) {
+        await upsertTranscriptRecords(native.records);
+        transcriptLive.set(agentId, { active: native.active, latestEndedAt: native.records.at(-1)?.endedAt ?? null });
+        if (native.context) stateFor(agentId).lastCtx = native.context;
+      }
+      const previous = new Set(allRecords().filter(record => record.agentId === agentId && record.sessionId && record.sessionId !== sessionId).map(record => record.sessionId!));
+      for (const id of previous) {
+        const historical = await transcripts.read(agentId, id);
+        if (historical) await upsertTranscriptRecords(historical.records);
+      }
+    } catch (error) { console.error('token-ledger-canary: native usage recovery failed; retaining telemetry', error); }
+  }
+}
+
 function inFlightFor(agentId: string): InFlight | null {
   const state = agents.get(agentId);
   const open = state?.open;
   if (!open) return null;
+  const native = transcriptLive.get(agentId);
+  if (native?.active && Date.parse(native.active.startedAt ?? '') >= Date.parse(open.startedAt) - 1000) {
+    const record = native.active;
+    const ctx = state?.lastCtx;
+    const estimate = estimateUsageCost(record);
+    return {
+      turnId: open.turnId, startedAt: open.startedAt, modelCalls: record.modelCalls,
+      input: freshInput(usageSemantics(record.provider, record.model), record.input, record.cached, record.cacheWrite),
+      cached: record.cached, cacheWrite: record.cacheWrite ?? null, output: record.output,
+      effectiveCostUsd: estimate.effectiveCostUsd, costSource: estimate.costSource,
+      ctxUsed: ctx?.used ?? null, ctxMax: ctx?.max ?? null,
+    };
+  }
+  if (native?.latestEndedAt && Date.parse(native.latestEndedAt) >= Date.parse(open.startedAt)) return null;
   const semantics = usageSemantics(open.provider, open.model);
   let input: number | null = null;
   let rawInput: number | null = null;
@@ -301,6 +345,13 @@ export async function handleSync(
   await ensurePricing();
   await persistence;
   await flushStore();
+  if (!transcripts.has(input.agentId)) {
+    const handle = context.paseo.agents.ref(input.agentId);
+    await handle.refresh();
+    const snapshot = handle.current();
+    if (snapshot) transcripts.note(snapshot);
+  }
+  await reconcileTranscripts([input.agentId]);
   const model = readModel();
   const group = model.groups.get(input.agentId);
   const summary = group?.summary ?? { ...EMPTY_SUMMARY };
@@ -320,6 +371,7 @@ export async function handleOverview(input: { since?: string }, context: { paseo
   await ensurePricing();
   await persistence;
   await flushStore();
+  await reconcileTranscripts(transcripts.ids());
   const byAgent = readModel().groups;
   await catalog.ensureWorkspaces(context.paseo);
   const snapshots = catalog.agents;

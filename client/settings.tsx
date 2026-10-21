@@ -12,7 +12,7 @@ export function TokenLedgerSettings({ theme }: PluginSurfaceProps) {
   };
   if (settings.status === 'loading') return <Text style={{ color: theme.colors.foregroundMuted }}>Loading settings…</Text>;
   if (settings.status !== 'ready') return (
-    <SettingsSection title="TokenLedger">
+    <SettingsSection title="TokenLedger Canary">
       <SettingsCard>
         <SettingsAction label="Settings unavailable" error={settings.error} actionLabel="Retry" onPress={() => { void settings.reload(); }} />
         {settings.status === 'invalid' ? <SettingsAction label="Restore default preferences" hint="Ledger records and custom prices are preserved." actionLabel="Reset preferences" disabled={settings.saving} onPress={() => { void settings.reset(); }} /> : null}
@@ -31,7 +31,7 @@ export function TokenLedgerSettings({ theme }: PluginSurfaceProps) {
         <SettingsCard>
           <SettingsSwitch label="OpenRouter reference prices" hint="Use cached reference prices and refresh the public catalog in the background." value={settings.values.openRouterPricing} disabled={settings.saving} onValueChange={(openRouterPricing) => save({ openRouterPricing })} />
           <SettingsSwitch label="Built-in fallback prices" hint="Use known model prices when no custom or OpenRouter price matches." value={settings.values.builtinPricing} disabled={settings.saving} onValueChange={(builtinPricing) => save({ builtinPricing })} />
-          <SettingsRow label="Custom prices" hint="Edit pricing.json in the TokenLedger data folder on this host. Changes are picked up within 30 seconds of the next usage request." />
+          <SettingsRow label="Custom prices" hint="Edit pricing.json in the TokenLedger Canary data folder on this host. Changes are picked up within 30 seconds of the next usage request." />
         </SettingsCard>
       </SettingsSection>
       <Text style={{ color: theme.colors.foregroundMuted, fontSize: 12 }}>Reported costs take priority, followed by custom prices and enabled reference sources. Reference prices may differ from gateway discounts or Fast Mode charges. Preferences apply to clients connected to this host.</Text>

@@ -137,7 +137,7 @@ function RecordRow({ record, theme, dense }: { record: TurnRow; theme: PluginThe
         ? "OR ref"
         : record.costSource === "builtin"
           ? "list"
-          : fmtResidual(split?.otherUsd ?? null);
+          : record.costSource === 'mixed' ? 'mixed refs' : fmtResidual(split?.otherUsd ?? null);
   const seqWidth = dense ? 20 : 24;
   return (
     <View
@@ -174,7 +174,17 @@ function RecordRow({ record, theme, dense }: { record: TurnRow; theme: PluginThe
         >
           {fmtDuration(record.durationMs)}
             {record.usageGap ? ' · gap' : record.quality === "partial" ? " ≈" : ""}
+          {record.serviceTier === 'priority' || record.serviceTier === 'fast' ? ' · Fast' : record.serviceTier === 'ultrafast' ? ' · Ultrafast' : ''}
+          {record.source === 'codex_transcript' ? ' · logs' : ''}
         </Text>
+        {record.accountingWarnings?.length ? (
+          <Text style={{ color: theme.colors.foregroundMuted, fontSize: 10 }}>
+            {record.accountingWarnings.includes('cache-retention-unknown-30m-assumed') ? 'Cache writes priced at 30m retention. ' : ''}
+            {record.accountingWarnings.includes('processing-tier-unknown-standard-assumed') ? 'Speed unknown; Standard assumed. ' : ''}
+            {record.accountingWarnings.includes('cache-write-count-unavailable') ? 'Cache write counts unavailable. ' : ''}
+            {record.accountingWarnings.some(warning => warning === 'invalid-token-sample' || warning === 'cumulative-counter-unavailable') ? 'Some usage records are incomplete.' : ''}
+          </Text>
+        ) : null}
       </View>
       {hasUsage ? (
         <>

@@ -11,7 +11,7 @@ test('startup replays pending writes idempotently, settles missing agents, and p
   const home = await mkdtemp(join(tmpdir(), 'token-ledger-recovery-'));
   const previousHome = process.env.PASEO_HOME;
   process.env.PASEO_HOME = home;
-  const dir = join(home, 'plugins', 'token-ledger');
+  const dir = join(home, 'plugins', 'token-ledger-canary');
   await mkdir(dir, { recursive: true });
   const snapshot = { id: 'live', provider: 'codex', model: 'gpt-5', status: 'running',
     runtimeInfo: { sessionId: 's' }, activeTurn: {turnId: 't', startedAt: '2026-09-14T00:00:00Z'},

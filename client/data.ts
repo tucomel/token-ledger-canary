@@ -12,7 +12,7 @@ function useRefresh(pricingKey: string | null): void {
   const paseo = usePaseo();
   const cache = useQueryClient();
   useEffect(() => {
-    if (pricingKey !== null) void cache.invalidateQueries({ queryKey: ['token-ledger'] });
+    if (pricingKey !== null) void cache.invalidateQueries({ queryKey: ['token-ledger-canary'] });
   }, [pricingKey, cache]);
   useEffect(() => {
     let clients = coordinators.get(cache);
@@ -33,9 +33,9 @@ function useRefresh(pricingKey: string | null): void {
         dirty.add(id);
         timer ??= setTimeout(() => {
           timer = undefined;
-          for (const agentId of dirty) void cache.invalidateQueries({ queryKey: ['token-ledger', 'agent', agentId] });
+          for (const agentId of dirty) void cache.invalidateQueries({ queryKey: ['token-ledger-canary', 'agent', agentId] });
           dirty.clear();
-          void cache.invalidateQueries({ queryKey: ['token-ledger', 'overview'] });
+          void cache.invalidateQueries({ queryKey: ['token-ledger-canary', 'overview'] });
         }, 500);
       });
       coordinator = { count: 0, dispose: () => { unsubscribe(); clearTimeout(timer); } };
@@ -53,7 +53,7 @@ export function useLedger(agentId: string) {
   const sync = useRpc(ledgerSync);
   const cache = useQueryClient();
   useRefresh(settings.status === 'ready' ? `${settings.values.openRouterPricing}:${settings.values.builtinPricing}` : null);
-  const queryKey = ['token-ledger', 'agent', agentId] as const;
+  const queryKey = ['token-ledger-canary', 'agent', agentId] as const;
   return useQuery({
     queryKey,
     queryFn: async () => {
@@ -72,7 +72,7 @@ export function useOverview(since: string | null) {
   const overview = useRpc(ledgerOverview);
   useRefresh(settings.status === 'ready' ? `${settings.values.openRouterPricing}:${settings.values.builtinPricing}` : null);
   return useQuery({
-    queryKey: ['token-ledger', 'overview', since],
+    queryKey: ['token-ledger-canary', 'overview', since],
     queryFn: () => overview(since === null ? {} : { since }),
     staleTime: 1000,
     refetchInterval: (query) => refreshIntervalMs(settings.status === 'ready' ? settings.values.refreshInterval : 'normal', !!query.state.data?.groups.some((g) => g.agents.some((a) => a.active))),

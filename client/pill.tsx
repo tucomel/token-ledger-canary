@@ -51,7 +51,7 @@ export function contributePills(client: PluginClientContext, placement: PanelPla
     handle = client.addComposerPill({
       id: `ledger-pill-${agent.id}`, workspaceId, agentId: agent.id,
       button: {
-        title: "Open TokenLedger Session Ledger", icon: UsageIcon, label: "…",
+        title: "Open TokenLedger Canary Session Ledger", icon: UsageIcon, label: "…",
         behavior: { kind: "action", onPress: () => client.openPanel("ledger", {
           workspaceId, agentId: agent.id, ...placement.options(agent.id),
         }) },

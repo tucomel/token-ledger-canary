@@ -10,6 +10,10 @@ export const TurnRecordSchema = z.object({
   model: z.string().nullable(),
   /** Provider session identity, when observed; optional for pre-0.8 records. */
   sessionId: z.string().nullable().optional(),
+  nativeTurnId: z.string().optional(),
+  nativeSessionId: z.string().optional(),
+  serviceTier: z.string().nullable().optional(),
+  accountingWarnings: z.array(z.string()).optional(),
   startedAt: z.string().nullable(),
   endedAt: z.string(),
   durationMs: z.number().nullable(),
@@ -36,6 +40,12 @@ export const TurnRecordSchema = z.object({
   costScope: z.enum(['session', 'unknown']).optional(),
   /** Raw per-request observations, when the harness contract is verified. */
   requests: z.array(z.object({
+    id: z.string().optional(),
+    model: z.string().nullable().optional(),
+    serviceTier: z.string().nullable().optional(),
+    cacheRetention: z.string().nullable().optional(),
+    cacheWrite12h: z.number().finite().nonnegative().nullable().optional(),
+    sessionLongContext: z.boolean().optional(),
     input: z.number().nullable(), cached: z.number().nullable(), output: z.number().nullable(),
     cacheWrite: z.number().finite().nonnegative().nullable().optional(),
   })).optional(),
@@ -47,7 +57,7 @@ export const TurnRecordSchema = z.object({
 });
 export type TurnRecord = z.infer<typeof TurnRecordSchema>;
 
-export const CostSourceSchema = z.enum(["reported", "override", "openrouter", "builtin"]);
+export const CostSourceSchema = z.enum(["reported", "override", "openrouter", "builtin", "mixed"]);
 export type CostSource = z.infer<typeof CostSourceSchema>;
 
 export const CostBreakdownSchema = z.object({

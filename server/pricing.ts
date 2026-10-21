@@ -6,6 +6,7 @@ import type { CostSource, TurnRecord, TurnRow } from "../shared/ledger.ts";
 import { canonicalModel, costBreakdownWithPricing, modelPricing, type ModelPricing } from "../shared/pricing.ts";
 import { freshInput, usageSemantics } from "../shared/semantics.ts";
 import { getPreferences, preferencesRevision } from './preferences.ts';
+import { adjustOpenAiPricing, knownOpenAiModel, legacySessionPricing, openAiBasePricing } from '../shared/openai-pricing.ts';
 
 type PriceTier = ModelPricing & { upToInputTokens?: number };
 type PriceEntry = { providers?: string[]; model: string; tiers: PriceTier[] };
@@ -34,7 +35,7 @@ export const PriceFileSchema = z.object({
   ),
 });
 
-const DATA_DIR = join(process.env.PASEO_HOME ?? join(homedir(), ".paseo"), "plugins", "token-ledger");
+const DATA_DIR = join(process.env.PASEO_HOME ?? join(homedir(), ".paseo"), "plugins", "token-ledger-canary");
 const PRICE_FILE = join(DATA_DIR, "pricing.json");
 const OPENROUTER_CACHE_FILE = join(DATA_DIR, "openrouter-pricing.json");
 const OPENROUTER_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -270,19 +271,27 @@ function lookupOpenRouter(model: string): ModelPricing | null {
   return { input: price.prompt, cacheRead: price.cacheRead, cacheWrite: price.cacheWrite, output: price.completion };
 }
 
-function resolvePricing(provider: string | null, model: string | null, promptTokens: number): { pricing: ModelPricing; source: Exclude<CostSource, "reported"> } | null {
+function resolvePricing(provider: string | null, model: string | null, promptTokens: number, serviceTier?: string | null, retention?: string | null): { pricing: ModelPricing; source: Exclude<CostSource, "reported"> } | null {
   if (!model) return null;
   const canonical = canonicalModel(model);
   const override = overridePrices.find((entry) => canonicalModel(entry.model) === canonical && providerMatches(entry, provider, model));
-  if (override) return { pricing: chooseTier(override, promptTokens), source: "override" };
+  const adjusted = (pricing: ModelPricing, source: Exclude<CostSource, 'reported'>, long = true) => {
+    if (!/codex/i.test(provider ?? '') && !knownOpenAiModel(model)) return { pricing, source };
+    const result = adjustOpenAiPricing(model, pricing, promptTokens, serviceTier, retention, long);
+    return result ? { pricing: result, source } : null;
+  };
+  if (override) return adjusted(chooseTier(override, promptTokens), 'override', false);
+  const official = getPreferences().builtinPricing && /codex/i.test(provider ?? '') ? openAiBasePricing(model) : null;
+  if (official) return adjusted(official, 'builtin');
   const openrouter = getPreferences().openRouterPricing ? lookupOpenRouter(model) : null;
-  if (openrouter) return { pricing: openrouter, source: "openrouter" };
+  if (openrouter) return adjusted(openrouter, 'openrouter');
   const builtin = getPreferences().builtinPricing ? modelPricing(model) : null;
-  return builtin ? { pricing: builtin, source: "builtin" } : null;
+  return builtin ? adjusted(builtin, 'builtin') : null;
 }
 
 type PriceableUsage = Pick<TurnRecord, "provider" | "model" | "input" | "cached" | "cacheWrite" | "output"> & {
   requests?: TurnRecord['requests'];
+  serviceTier?: string | null;
 };
 
 /** Prices raw provider usage, including per-request tiers when observations are available. */
@@ -291,28 +300,38 @@ export function estimateUsageCost(usage: PriceableUsage): {
   costSource: Exclude<CostSource, "reported"> | null;
   costBreakdown: ReturnType<typeof costBreakdownWithPricing>;
 } {
-  const semantics = usageSemantics(usage.provider, usage.model);
-  const input = freshInput(semantics, usage.input, usage.cached, usage.cacheWrite);
-  const promptTokens = (input ?? 0) + (usage.cached ?? 0) + (usage.cacheWrite ?? 0);
-  const resolved = resolvePricing(usage.provider, usage.model, promptTokens);
-  let breakdown = resolved ? costBreakdownWithPricing({ ...usage, input, costUsd: null }, resolved.pricing) : null;
-  if (usage.requests?.length && resolved) {
-    const parts = usage.requests.map((request) => {
+  const requests = usage.requests?.length ? usage.requests : [usage];
+  const sources: Exclude<CostSource, 'reported'>[] = [];
+  const parts = requests.map((request) => {
+      const model = 'model' in request && request.model !== undefined ? request.model : usage.model;
+      const semantics = usageSemantics(usage.provider, model);
       const fresh = freshInput(semantics, request.input, request.cached, request.cacheWrite);
-      const rate = resolvePricing(usage.provider, usage.model, (fresh ?? 0) + (request.cached ?? 0) + (request.cacheWrite ?? 0));
-      return rate ? costBreakdownWithPricing({ ...request, input: fresh, costUsd: null }, rate.pricing) : null;
-    });
-    if (parts.every((part) => part !== null)) {
+      const tier = 'serviceTier' in request && request.serviceTier !== undefined ? request.serviceTier : usage.serviceTier;
+      const retention = 'cacheRetention' in request ? request.cacheRetention : null;
+      const prompt = (fresh ?? 0) + (request.cached ?? 0) + (request.cacheWrite ?? 0);
+      const billingPrompt = 'sessionLongContext' in request && request.sessionLongContext ? Math.max(272001, prompt) : prompt;
+      const rate = resolvePricing(usage.provider, model, billingPrompt, tier, retention);
+      if (!rate) return null;
+      sources.push(rate.source);
+      const split = costBreakdownWithPricing({ ...request, input: fresh, costUsd: null }, rate.pricing);
+      // A mixed-retention sample carries a subset; the base write rate is 30m.
+      if (split && 'cacheWrite12h' in request && request.cacheWrite12h != null && retention !== '12h' && retention !== 'extended' && !legacySessionPricing(model ?? '')) {
+        if (request.cacheWrite12h > (request.cacheWrite ?? 0)) return null;
+        split.cacheWriteUsd = (split.cacheWriteUsd ?? 0) + request.cacheWrite12h * (rate.pricing.cacheWrite ?? rate.pricing.input) / 1_000_000;
+      }
+      return split;
+  });
+  let breakdown: ReturnType<typeof costBreakdownWithPricing> = null;
+  if (parts.every((part) => part !== null)) {
       const sum = parts.reduce((total, part) => ({ inUsd: total.inUsd + part!.inUsd,
         cacheUsd: total.cacheUsd + part!.cacheUsd, cacheWriteUsd: total.cacheWriteUsd + (part!.cacheWriteUsd ?? 0),
         outUsd: total.outUsd + part!.outUsd }), { inUsd: 0, cacheUsd: 0, cacheWriteUsd: 0, outUsd: 0 });
       const { cacheWriteUsd, ...known } = sum;
       breakdown = { ...known, ...(parts.some((part) => part!.cacheWriteUsd !== undefined) ? { cacheWriteUsd } : {}), otherUsd: null };
-    }
   }
   return {
     effectiveCostUsd: breakdown ? breakdown.inUsd + breakdown.cacheUsd + (breakdown.cacheWriteUsd ?? 0) + breakdown.outUsd : null,
-    costSource: resolved?.source ?? null,
+    costSource: breakdown ? new Set(sources).size === 1 ? sources[0] : 'mixed' : null,
     costBreakdown: breakdown,
   };
 }

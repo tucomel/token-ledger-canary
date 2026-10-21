@@ -11,7 +11,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
   const home = await mkdtemp(join(tmpdir(), 'token-ledger-tracker-test-'));
   const oldHome = process.env.PASEO_HOME;
   process.env.PASEO_HOME = home;
-  const dir = join(home, 'plugins', 'token-ledger');
+  const dir = join(home, 'plugins', 'token-ledger-canary');
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, 'pricing.json'), JSON.stringify({version: 1, currency: 'USD', prices: [{
     providers: ['codex'], model: 'gpt-5', tiers: [{input: 10, cacheRead: 1, cacheWrite: 15, output: 20}],

@@ -137,7 +137,9 @@ export function SummaryRow({ summary, theme, dense }: { summary: Summary; theme:
 export function UsageCoverageNote({ theme }: { theme: PluginTheme }) {
   return (
     <Text style={{ color: theme.colors.foregroundMuted, fontSize: 11 }}>
-      Totals reflect usage available from Paseo; subagent usage and cache writes may be missing.
+      Codex totals are recovered from local logs, including cache writes and processing speed when recorded.
+      Costs are estimates. Missing cache lifetimes use 30m pricing and are marked per turn.
+      Provider-internal subagent usage may still be absent; other providers use Paseo telemetry.
     </Text>
   );
 }

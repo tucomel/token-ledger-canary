@@ -1,3 +1,12 @@
+# Canary 0.8.0-canary.1 (2026-10-21)
+
+- Read Codex session and archive counters without replacing the native provider.
+- Recover custom-home and Canary ACP thread usage, including missed or offline turns.
+- Distinguish equal-size calls from replayed snapshots using native identities and cumulative counts.
+- Price actual models, processing speed, per-request context tiers and cache writes.
+- Apply GPT-5.5 session long-context rules and expose missing-data assumptions.
+- Keep isolated state and preserve the original installation for rollback.
+
 # Changelog
 
 ## Unreleased
