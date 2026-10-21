@@ -14,7 +14,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
   const dir = join(home, 'plugins', 'token-ledger-canary');
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, 'pricing.json'), JSON.stringify({version: 1, currency: 'USD', prices: [{
-    providers: ['codex'], model: 'gpt-5', tiers: [{input: 10, cacheRead: 1, cacheWrite: 15, output: 20}],
+    providers: ['codex-canary'], model: 'gpt-5', tiers: [{input: 10, cacheRead: 1, cacheWrite: 15, output: 20}],
   }]}));
   await writeFile(join(dir, 'openrouter-pricing.json'), JSON.stringify({fetchedAt: new Date().toISOString(), prices: []}));
   let update: (event: PaseoAgentUpdate) => void = () => {};
@@ -23,7 +23,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
   const published: Array<{id: string; data: {quality: string}}> = [];
   let catalogSubscriptions = 0;
   let listCalls = 0;
-  const snapshot = { id: 'a', provider: 'codex', model: 'gpt-5', workspaceId: 'w', title: 'Test',
+  const snapshot = { id: 'a', provider: 'codex-canary', model: 'gpt-5', workspaceId: 'w', title: 'Test',
     status: 'idle', updatedAt: '2026-09-14T00:00:00Z', lastUsage: undefined };
   const handle = { refresh: async () => snapshot, current: () => snapshot,
     timeline: { append: async (item: {id: string; data: {quality: string}}) => {
@@ -51,7 +51,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
   try {
     await Promise.all([tracker.prepareAgent(paseo, 'a'), tracker.ensureTracker(paseo)]);
     assert.equal(catalogSubscriptions, 1);
-    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:00Z', event: {type: 'turn_started', provider: 'codex', turnId: 't1'} });
+    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:00Z', event: {type: 'turn_started', provider: 'codex-canary', turnId: 't1'} });
     update({kind: 'upsert', agent: {...snapshot, activeTurn: {turnId: 't1', startedAt: '2026-09-14T00:00:00Z'},
       // Synthetic reducer extension: the current public Paseo type lacks writes.
       lastUsage: {inputTokens: 100, cachedInputTokens: 80, cacheWriteInputTokens: 10, outputTokens: 5}}} as unknown as PaseoAgentUpdate);
@@ -60,7 +60,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
     assert.equal(live.inFlight?.cacheWrite, 10);
     assert.equal(live.inFlight?.effectiveCostUsd, 0.00043);
     assert.equal(live.inFlight?.costSource, 'override');
-    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:01Z', event: {type: 'turn_completed', provider: 'codex', turnId: 't1'} });
+    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:01Z', event: {type: 'turn_completed', provider: 'codex-canary', turnId: 't1'} });
     const result = ledgerSync.output.parse(await tracker.handleSync({agentId: 'a'}, {paseo}));
     assert.equal(result.summary.turns, 1); assert.equal(result.records[0].input, 10);
     assert.equal(result.summary.cacheWrite, 10);
@@ -89,7 +89,7 @@ test('tracker starts without UI, serves validated RPCs, normalizes raw disk usag
     assert.equal(published.length, 2);
     assert.equal(published[0].id, published[1].id);
     assert.equal(published[1].data.quality, "partial");
-    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:02Z', event: {type: 'turn_started', provider: 'codex', turnId: 't2'} });
+    timeline({ agentId: 'a', timestamp: '2026-09-14T00:00:02Z', event: {type: 'turn_started', provider: 'codex-canary', turnId: 't2'} });
     assert.equal(store.allRecords().length, 1);
   } finally {
     await tracker.stopTracker();

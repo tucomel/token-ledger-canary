@@ -1,6 +1,7 @@
-import type { Summary, TurnRecord, TurnRow } from '../shared/ledger.ts';
 import { allRecords, storeRevision } from './store.ts';
 import { enrichTurn, pricingRevision } from './pricing.ts';
+import type { Summary, TurnRecord, TurnRow } from '../shared/ledger.ts';
+import { isTrackedProvider } from '../shared/provider-scope.ts';
 export const EMPTY_SUMMARY: Summary = {
   turns: 0,
   input: 0,
@@ -42,6 +43,7 @@ export function readModel() {
   if (current !== revision) {
     const raw = new Map<string, TurnRecord[]>();
     for (const record of allRecords()) {
+      if (!isTrackedProvider(record.provider)) continue;
       const group = raw.get(record.agentId) ?? [];
       group.push(record); raw.set(record.agentId, group);
     }

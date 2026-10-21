@@ -187,6 +187,7 @@ export class CodexTranscripts {
   constructor(home = process.env.PASEO_HOME ?? join(homedir(), '.paseo')) { this.home = home; }
 
   note(agent: AccountingAgent): void { this.agents.set(agent.id, agent); }
+  forget(agentId: string): void { this.agents.delete(agentId); }
   has(agentId: string): boolean { return this.agents.has(agentId); }
   ids(): string[] { return [...this.agents.keys()]; }
   sessionId(agentId: string): string | null {

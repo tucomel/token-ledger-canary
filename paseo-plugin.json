@@ -1,7 +1,7 @@
 {
   "id": "token-ledger-canary",
   "name": "TokenLedger Canary",
-  "description": "Canary fork: transcript-backed Codex tokens, cache writes and processing-tier pricing.",
+  "description": "Token and cost estimates exclusively for codex-canary, including cache writes and processing tiers.",
   "icon": "images/icon.png",
   "media": [
     "images/screenshot-overview.png",

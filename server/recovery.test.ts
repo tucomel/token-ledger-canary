@@ -13,7 +13,7 @@ test('startup replays pending writes idempotently, settles missing agents, and p
   process.env.PASEO_HOME = home;
   const dir = join(home, 'plugins', 'token-ledger-canary');
   await mkdir(dir, { recursive: true });
-  const snapshot = { id: 'live', provider: 'codex', model: 'gpt-5', status: 'running',
+  const snapshot = { id: 'live', provider: 'codex-canary', model: 'gpt-5', status: 'running',
     runtimeInfo: { sessionId: 's' }, activeTurn: {turnId: 't', startedAt: '2026-09-14T00:00:00Z'},
     lastUsage: {inputTokens: 100, cachedInputTokens: 50, outputTokens: 10} };
   const live = createState(); noteUsage(live, snapshot);
@@ -42,7 +42,7 @@ test('startup replays pending writes idempotently, settles missing agents, and p
     assert.equal(store.allRecords().filter((r) => r.id === pending.id).length, 1);
     assert.match(store.allRecords().find((r) => r.agentId === 'missing')!.source, /^recovered_interruption:/);
     assert.equal(published.length, 0);
-    observe({agentId:'live', timestamp:'2026-09-14T00:00:02Z', event:{type:'turn_completed', provider:'codex', turnId:'t', usage:{inputTokens:120, cachedInputTokens:60, outputTokens:20}}});
+    observe({agentId:'live', timestamp:'2026-09-14T00:00:02Z', event:{type:'turn_completed', provider:'codex-canary', turnId:'t', usage:{inputTokens:120, cachedInputTokens:60, outputTokens:20}}});
     const after = await tracker.handleSync({agentId:'live'}, {paseo});
     assert.equal(after.records[0].id, live.open!.key);
     assert.equal(after.records[0].input, 110);

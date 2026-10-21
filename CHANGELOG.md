@@ -1,3 +1,9 @@
+# Canary 0.8.0-canary.3 (2026-10-21)
+
+- Restrict collection, journal recovery, historical totals, overview and composer pills to the exact codex-canary provider.
+- Keep excluded provider history on disk for rollback and hide its old timeline summaries.
+- Verify scope across legacy mixed-provider data, restored pending turns, live hooks and RPC responses.
+
 # Canary 0.8.0-canary.2 (2026-10-21)
 
 - Refresh cached log paths immediately when Codex archives or restores a session.

@@ -2,6 +2,7 @@ import type { PluginServerContext } from "@getpaseo/plugin/server";
 import { ledgerEnsure, ledgerOverview, ledgerSync } from "./shared/ledger.ts";
 import { ensureTracker, handleEnsure, handleOverview, handleSync, observeStart, observeEnd, prepareAgent, stopTracker } from "./server/tracker.ts";
 import { initializePreferences } from './server/preferences.ts';
+import { isTrackedProvider } from './shared/provider-scope.ts';
 
 export default function contribute(server: PluginServerContext) {
   const preferences = initializePreferences(server);
@@ -11,7 +12,7 @@ export default function contribute(server: PluginServerContext) {
   // Establish timeline demand before the provider can emit its first turn.
   // Lifecycle hooks run even with no desktop/mobile client connected.
   const beforeOpen = server.before("agent.session_open", async ({ request }, { paseo }) => {
-    if (request.purpose !== "interactive") return;
+    if (request.purpose !== "interactive" || !isTrackedProvider(request.provider)) return;
     // A newly-created agent is not in the daemon catalog until session_open
     // returns. Establish catalog demand now; its first upsert attaches usage.
     try {

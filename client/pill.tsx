@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { subscribeAgents } from "../shared/agents.ts";
 import { ledgerEnsure, type SyncResult } from "../shared/ledger.ts";
 import { fmtCost, fmtTokens } from "./ui.tsx";
+import { isTrackedProvider } from '../shared/provider-scope.ts';
 
 import type { PanelPlacement } from "./layout.ts";
 
@@ -34,7 +35,7 @@ export function contributePills(client: PluginClientContext, placement: PanelPla
   const upsert = (agent: PaseoAgent) => {
     if (disposed) return;
     const workspaceId = agent.workspaceId;
-    if (!workspaceId || agent.status === "closed" || agent.archivedAt) return remove(agent.id);
+    if (!isTrackedProvider(agent.provider) || !workspaceId || agent.status === "closed" || agent.archivedAt) return remove(agent.id);
     if (pills.get(agent.id)?.workspaceId === workspaceId) return;
     remove(agent.id);
     let handle: PluginButtonRegistration;

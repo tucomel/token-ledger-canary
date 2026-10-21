@@ -16,6 +16,7 @@ import {
   upsertTranscriptRecords,
 } from "./store.ts";
 import { CodexTranscripts, overlaps } from './codex-transcripts.ts';
+import { isTrackedProvider } from '../shared/provider-scope.ts';
 
 import { readModel, summaryFromRows, EMPTY_SUMMARY } from "./read-model.ts";
 import { Catalog } from "./catalog.ts";
@@ -68,7 +69,7 @@ async function drainRecords(): Promise<void> {
 }
 function persist(record: TurnRecord | null): void {
   checkpoint();
-  if (!record) return;
+  if (!record || !isTrackedProvider(record.provider)) return;
   pendingRecords.set(record.id, record);
   if (!record.source.startsWith("recovered_")) liveRecords.add(record.id);
   persistence = persistence.catch(() => undefined).then(drainRecords);
@@ -84,9 +85,11 @@ function stateFor(agentId: string): AgentState {
   return state;
 }
 export function observeStream(payload: PaseoAgentTimelineEvent): void {
-  if (!stopped) persist(streamTurn(stateFor(payload.agentId), payload));
+  if (stopped || !isTrackedProvider(agents.get(payload.agentId)?.provider)) return;
+  persist(streamTurn(stateFor(payload.agentId), payload));
 }
 export async function observeStart(event: PluginLifecycleEvents["agent.turn_started"], paseo: PaseoApi): Promise<void> {
+  if (!isTrackedProvider(event.agent.provider)) return;
   await ensureTracker(paseo);
   if (stopped) return;
   const state = stateFor(event.agent.id);
@@ -95,6 +98,7 @@ export async function observeStart(event: PluginLifecycleEvents["agent.turn_star
   await prepareAgent(paseo, event.agent.id);
 }
 export async function observeEnd(event: PluginLifecycleEvents["agent.turn_ended"], paseo: PaseoApi): Promise<void> {
+  if (!isTrackedProvider(event.agent.provider)) return;
   await ensureTracker(paseo);
   if (stopped) return;
   const state = stateFor(event.agent.id);
@@ -122,7 +126,7 @@ function retireAgent(id: string, gap = false): void {
   subscriptions?.unwatch(id);
 }
 function watchAgent(agent: AgentSnapshotLike, restored = false): void {
-  if (stopped) return;
+  if (stopped || !isTrackedProvider(agent.provider)) return;
   if (agent.provider) transcripts.note({ ...agent, provider: agent.provider });
   if (recovered.delete(agent.id) && !agent.activeTurn && stateFor(agent.id).open) {
     const record = closeTurn(agent.id, stateFor(agent.id), "canceled", null, new Date().toISOString());
@@ -141,7 +145,9 @@ export async function prepareAgent(paseo: PaseoApi, agentId: string): Promise<vo
   const handle = paseo.agents.ref(agentId);
   await handle.refresh();
   if (stopped) return;
-  watchAgent(handle.current() ?? { id: agentId });
+  const snapshot = handle.current();
+  if (!snapshot || !isTrackedProvider(snapshot.provider)) return;
+  watchAgent(snapshot);
   await subscriptions?.watch(agentId, true);
 }
 export function ensureTracker(paseo: PaseoApi): Promise<void> {
@@ -152,10 +158,13 @@ export function ensureTracker(paseo: PaseoApi): Promise<void> {
     await loadStore();
     const journal = await loadJournal();
     for (const [id, state] of journal.states) {
+      if (!isTrackedProvider(state.provider)) continue;
       agents.set(id, state);
       if (state.open) recovered.add(id);
     }
-    for (const record of journal.pending) pendingRecords.set(record.id, record);
+    for (const record of journal.pending) {
+      if (isTrackedProvider(record.provider)) pendingRecords.set(record.id, record);
+    }
     // Recover an already-appended turn from a checkpoint taken before closure.
     const recorded = new Map(allRecords().map((record) => [record.id, record]));
     for (const state of agents.values()) {
@@ -190,6 +199,15 @@ export function ensureTracker(paseo: PaseoApi): Promise<void> {
       error: (id, error) => console.error('token-ledger: timeline subscription failed', id, error),
     });
     const applyAgent = (agent: PaseoAgent, restored = false) => {
+      if (!isTrackedProvider(agent.provider)) {
+        retireAgent(agent.id);
+        agents.delete(agent.id);
+        catalog.remove(agent.id);
+        transcripts.forget(agent.id);
+        transcriptLive.delete(agent.id);
+        recovered.delete(agent.id);
+        return;
+      }
       transcripts.note(agent);
       restored = needsReconcile.delete(agent.id) || restored;
       bump(agent.id);
@@ -279,7 +297,7 @@ async function reconcileTranscripts(agentIds: string[]): Promise<void> {
 function inFlightFor(agentId: string): InFlight | null {
   const state = agents.get(agentId);
   const open = state?.open;
-  if (!open) return null;
+  if (!open || !isTrackedProvider(open.provider)) return null;
   const native = transcriptLive.get(agentId);
   if (native?.active && Date.parse(native.active.startedAt ?? '') >= Date.parse(open.startedAt) - 1000) {
     const record = native.active;
@@ -349,7 +367,7 @@ export async function handleSync(
     const handle = context.paseo.agents.ref(input.agentId);
     await handle.refresh();
     const snapshot = handle.current();
-    if (snapshot) transcripts.note(snapshot);
+    if (snapshot && isTrackedProvider(snapshot.provider)) transcripts.note(snapshot);
   }
   await reconcileTranscripts([input.agentId]);
   const model = readModel();
@@ -384,6 +402,7 @@ export async function handleOverview(input: { since?: string }, context: { paseo
   for (const agentId of agentIds) {
     const stored = byAgent.get(agentId);
     const snapshot = snapshots.get(agentId) ?? null;
+    if (!stored && !isTrackedProvider(snapshot?.provider)) continue;
     const state = agents.get(agentId);
     const open = state?.open ?? null;
     const summary = !stored ? { ...EMPTY_SUMMARY }
@@ -403,7 +422,7 @@ export async function handleOverview(input: { since?: string }, context: { paseo
     const row: AgentUsageRow = {
       agentId,
       title: snapshot?.title ?? null,
-      provider: snapshot?.provider ?? state?.provider ?? null,
+      provider: snapshot?.provider ?? state?.provider ?? stored?.rows[0]?.provider ?? null,
       model: snapshot?.model ?? state?.model ?? null,
       status: snapshot?.status ?? null,
       active: open !== null,
