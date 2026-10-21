@@ -1,3 +1,7 @@
+# Canary 0.8.0-canary.2 (2026-10-21)
+
+- Refresh cached log paths immediately when Codex archives or restores a session.
+
 # Canary 0.8.0-canary.1 (2026-10-21)
 
 - Read Codex session and archive counters without replacing the native provider.

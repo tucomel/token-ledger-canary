@@ -1,6 +1,6 @@
 {
   "name": "paseo-token-ledger-canary",
-  "version": "0.8.0-canary.1",
+  "version": "0.8.0-canary.2",
   "description": "Paseo plugin: per-turn token usage, cache counts, and cost tracking with a persistent local ledger.",
   "type": "module",
   "license": "MIT",

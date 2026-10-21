@@ -17,7 +17,7 @@ Supported verified families: GPT-6 Astra, GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GP
 Requires Paseo 0.11.0 or later. Tested locally on 0.11.4.
 
 ```sh
-paseo plugin add github:tucomel/token-ledger-canary --ref canary-v0.8.0-1
+paseo plugin add github:tucomel/token-ledger-canary --ref canary-v0.8.0-2
 ```
 
 Open **TokenLedger Canary Session Ledger** from the Command Center, the composer's cost pill, or the sidebar. The original plugin's runtime ID is `token-ledger`; this fork uses `token-ledger-canary`. Disable the original when switching to avoid duplicate controls.

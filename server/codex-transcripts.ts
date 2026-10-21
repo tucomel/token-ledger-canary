@@ -257,10 +257,23 @@ export class CodexTranscripts {
     let path = (await this.index(home)).get(threadId);
     if (!path && Date.now() - (this.indices.get(home)?.at ?? 0) > 1000) path = (await this.index(home, true)).get(threadId);
     if (!path) return null;
-    let file = this.files.get(path);
-    if (!file) { file = new TranscriptFile(); this.files.set(path, file); }
-    await file.read(path);
-    return { ...file.parser.records(agent, threadId, sessionId), context: file.parser.context };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let file = this.files.get(path);
+      if (!file) { file = new TranscriptFile(); this.files.set(path, file); }
+      try {
+        await file.read(path);
+        return { ...file.parser.records(agent, threadId, sessionId), context: file.parser.context };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        // Archiving/restoring moves the log while the directory index is cached.
+        // Re-resolve once; a temporarily missing log must not erase saved usage.
+        this.files.delete(path);
+        if (attempt === 1) return null;
+        path = (await this.index(home, true)).get(threadId);
+        if (!path) return null;
+      }
+    }
+    return null;
   }
 }
 

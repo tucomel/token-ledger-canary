@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, mkdir, writeFile, appendFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, appendFile, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CodexTranscriptParser, CodexTranscripts } from './codex-transcripts.ts';
@@ -117,6 +117,31 @@ test('invalid session identifiers cannot escape the configured Codex home', asyn
   const reader = new CodexTranscripts('/does-not-exist');
   reader.note({ ...agent, runtimeInfo: { sessionId: '../../credentials' } });
   assert.equal(await reader.read(agent.id), null);
+});
+
+test('cached paths recover immediately when Codex archives or restores a session', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'canary-transcript-move-'));
+  try {
+    const codex = join(home, 'codex');
+    await mkdir(join(codex, 'sessions'), { recursive: true });
+    await mkdir(join(codex, 'archived_sessions'), { recursive: true });
+    await writeFile(join(home, 'config.json'), JSON.stringify({ agents: { providers: {
+      'codex-work': { extends: 'codex', env: { CODEX_HOME: codex } },
+    } } }));
+    const active = join(codex, 'sessions', 'rollout-' + thread + '.jsonl');
+    const archived = join(codex, 'archived_sessions', 'rollout-' + thread + '.jsonl');
+    await writeFile(active, [...begin(), usage(100), finish()].join('\n') + '\n');
+    const reader = new CodexTranscripts(home);
+    reader.note(agent);
+    const original = await reader.read(agent.id);
+    assert.equal(original!.records[0].modelCalls, 1);
+    await rename(active, archived);
+    assert.deepEqual(await reader.read(agent.id), original);
+    await rename(archived, active);
+    assert.deepEqual(await reader.read(agent.id), original);
+    await rm(active);
+    assert.equal(await reader.read(agent.id), null);
+  } finally { await rm(home, { recursive: true, force: true }); }
 });
 test('GPT-5.5 crossing its limit marks earlier session requests for repricing', () => {
   const parser = parse([...begin('gpt-5.5'), usage(100), finish(),
