@@ -2,6 +2,8 @@
 
 ## Canary fork overrides
 
+The Canary fork supports Paseo >=0.10.3. Its runtime manifest omits `name`, `icon` and `media` because 0.10 rejects them. `client/navigation.ts` detects screen APIs: 0.11 uses screens/footer; 0.10 deliberately uses the legacy surface/sidebar APIs. Shared UI types must not import 0.11-only SDK exports. These compatibility overrides take precedence over the upstream 0.11-only guidance below. Verify the 0.10.3 SDK alongside the existing CI matrix before changing compatibility code.
+
 Only the exact provider ID `codex-canary` is in scope. Apply `shared/provider-scope.ts` to live collection, journal recovery, read-model history, overview totals and composer pills. Keep excluded historical records on disk; do not collect other providers or infer scope from model names or provider inheritance.
 
 Runtime ID: `token-ledger-canary`; data directory: `plugins/token-ledger-canary`. The original TokenLedger instructions below describe the upstream telemetry fallback. This fork also reads Codex JSONL transcripts in `server/codex-transcripts.ts` to recover actual requests, models, processing tiers and cache writes. Never edit the CLI logs or application files. Unknown cache retention is explicitly estimated at 30m; missing processing tier is marked as an assumed Standard price. OpenAI price contracts are in `shared/openai-pricing.ts`. Preserve upstream MIT attribution and use only public SDK imports in shipped code.

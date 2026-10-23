@@ -1,6 +1,6 @@
 import { useDenseLayout } from "./layout.ts";
 import type { PluginTheme } from "@getpaseo/plugin";
-import { type PluginScreenProps } from "@getpaseo/plugin/client";
+import type { OverviewScreenProps } from './navigation.ts';
 import { ScrollView } from "@getpaseo/plugin/client/react-native";
 import { useMemo } from "react";
 import { useOverview } from "./data.ts";
@@ -106,7 +106,7 @@ export function TokenLedgerOverview({
   navigation,
   params,
   onRange,
-}: PluginScreenProps & { onRange: (range: Range) => void }) {
+}: OverviewScreenProps & { onRange: (range: Range) => void }) {
   const range = parseRange(params.range);
   const { data, error } = useOverview(useRangeStart(range));
   const { dense, setWidth } = useDenseLayout(layout.compact);

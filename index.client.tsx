@@ -1,8 +1,10 @@
-import type { PluginClientContext, PluginScreenProps } from "@getpaseo/plugin/client";
+import type { PluginClientContext, PluginSurfaceProps } from "@getpaseo/plugin/client";
+import { useState } from 'react';
 import { TokenLedgerOverview } from "./client/overview.tsx";
 import { TokenLedgerPanel } from "./client/panel.tsx";
 import { contributePills } from "./client/pill.tsx";
-import { OVERVIEW_SCREEN, parseRange, RANGE_LABELS } from "./client/range.ts";
+import type { Range } from './client/range.ts';
+import { registerOverview, type OverviewScreenProps } from './client/navigation.ts';
 import { LedgerSidebarItem } from "./client/sidebar.tsx";
 
 import { createPanelPlacement } from "./client/layout.ts";
@@ -22,15 +24,14 @@ export default function contribute(client: PluginClientContext) {
     locations: ["workspace", "explorer"],
     Component: TokenLedgerPanel,
   });
-  function OverviewScreen(props: PluginScreenProps) {
-    return <TokenLedgerOverview {...props} onRange={(range) => client.openScreen({ screenId: OVERVIEW_SCREEN, params: { range } })} />;
+  function OverviewScreen(props: OverviewScreenProps) {
+    return <TokenLedgerOverview {...props} onRange={range => navigation.open(range)} />;
   }
-  client.addScreen({
-    id: OVERVIEW_SCREEN,
-    title: (params) => `TokenLedger Canary · ${RANGE_LABELS[parseRange(params.range)]}`,
-    Component: OverviewScreen,
-  });
-  client.addSidebarFooterItem({ id: "ledger-today", title: "TokenLedger Canary", Component: LedgerSidebarItem });
+  function OverviewSurface(props: PluginSurfaceProps) {
+    const [range, setRange] = useState<Range>('all');
+    return <TokenLedgerOverview {...props} params={{ range }} onRange={setRange} />;
+  }
+  const navigation = registerOverview(client, { Screen: OverviewScreen, Surface: OverviewSurface, Sidebar: LedgerSidebarItem });
   client.addCommandCenterItem({
     id: "open-ledger",
     title: "Open TokenLedger Canary Session Ledger",
@@ -47,8 +48,8 @@ export default function contribute(client: PluginClientContext) {
     icon: "Coins",
     keywords: ["token", "usage", "cost", "ledger", "overview", "all"],
     context: "global",
-    onSelect({ openScreen }) {
-      openScreen({ screenId: OVERVIEW_SCREEN });
+    onSelect() {
+      navigation.open();
     },
   });
   return contributePills(client, placement);

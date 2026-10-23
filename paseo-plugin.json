@@ -1,14 +1,7 @@
 {
   "id": "token-ledger-canary",
-  "name": "TokenLedger Canary",
   "description": "Token and cost estimates exclusively for codex-canary, including cache writes and processing tiers.",
-  "icon": "images/icon.png",
-  "media": [
-    "images/screenshot-overview.png",
-    "images/screenshot-panel.png",
-    "images/screenshot-pill.jpg"
-  ],
   "requirements": {
-    "paseo": ">=0.11.0"
+    "paseo": ">=0.10.3"
   }
 }

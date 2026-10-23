@@ -1,5 +1,13 @@
 # Paseo compatibility
 
+## Canary fork
+
+Starting with `0.8.0-canary.4`, this fork supports **Paseo >=0.10.3**. The runtime manifest uses only fields accepted by 0.10, omitting the optional 0.11 listing metadata (`name`, `icon`, `media`). `client/navigation.ts` detects the full screen/footer capability before selecting the 0.11 path; otherwise it uses the legacy surface/sidebar APIs. The overview keeps local range selection on 0.10. Accounting, provider scope and stored records are unchanged.
+
+Both the 0.10.3 and 0.11.1 SDKs pass typechecking and 89 tests. The 0.10.3 SDK is checked locally alongside CI's 0.11.0, 0.11.1 and latest matrix. The installed 0.10.3 host is checked with a dependency-free compilation probe and real plugin RPCs. These fork-specific rules override the upstream policy below.
+
+## Upstream policy
+
 TokenLedger's manifest allows **Paseo >=0.11.0**, on both the daemon and the app.
 This policy applies from TokenLedger v0.7.0. v0.6.3 allows `>=0.9.1` and remains
 the release for Paseo 0.9.1-0.10.x hosts.

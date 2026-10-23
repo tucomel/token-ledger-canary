@@ -1,3 +1,10 @@
+# Canary 0.8.0-canary.4 (2026-10-23)
+
+- Restore loading on Paseo 0.10.3 by removing 0.11-only runtime manifest metadata.
+- Select legacy surface/sidebar navigation on 0.10 and screen/footer navigation on 0.11 by capability detection.
+- Keep overview range selection, existing data, provider scope and all cost calculations intact.
+- Add regression coverage and verify types and tests with both 0.10.3 and 0.11.1 SDKs.
+
 # Canary 0.8.0-canary.3 (2026-10-21)
 
 - Restrict collection, journal recovery, historical totals, overview and composer pills to the exact codex-canary provider.
