@@ -14,10 +14,10 @@ Supported verified families: GPT-6 Astra, GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GP
 
 ## Install
 
-Requires Paseo 0.10.3 or later. Tested locally on 0.10.3 and 0.11.4. On 0.10, the overview uses the legacy surface/sidebar APIs and keeps range selection inside the view. On 0.11 and later, it uses screen URL params and the live sidebar footer.
+Requires Paseo 0.10.3 or later. Tested locally on 0.10.3, 0.11.4 and 0.13.0. On 0.10, the overview uses the legacy surface/sidebar APIs. On 0.11 and later, it uses screens and the live sidebar footer. Screen params can select the initial range; period buttons update the mounted view without opening additional navigation leaves.
 
 ```sh
-paseo plugin add github:tucomel/token-ledger-canary --ref canary-v0.8.0-4
+paseo plugin add github:tucomel/token-ledger-canary --ref canary-v0.8.0-5
 ```
 
 Open **TokenLedger Canary Session Ledger** from the Command Center, the composer's cost pill, or the sidebar. The original plugin's runtime ID is `token-ledger`; this fork uses `token-ledger-canary`. Disable the original when switching to avoid duplicate controls.

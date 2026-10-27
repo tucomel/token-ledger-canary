@@ -2,6 +2,8 @@
 
 ## Canary fork
 
+Starting with `0.8.0-canary.5`, period buttons filter the mounted overview locally on every supported host. Screen URL params still select its initial range, but button clicks do not push routes or create leaves. The screen title stays neutral. This supersedes the upstream URL range navigation described below. The 0.13.0 host is verified with an interaction regression test, dependency-free bundle compilation and installed RPC checks.
+
 Starting with `0.8.0-canary.4`, this fork supports **Paseo >=0.10.3**. The runtime manifest uses only fields accepted by 0.10, omitting the optional 0.11 listing metadata (`name`, `icon`, `media`). `client/navigation.ts` detects the full screen/footer capability before selecting the 0.11 path; otherwise it uses the legacy surface/sidebar APIs. The overview keeps local range selection on 0.10. Accounting, provider scope and stored records are unchanged.
 
 Both the 0.10.3 and 0.11.1 SDKs pass typechecking and 89 tests. The 0.10.3 SDK is checked locally alongside CI's 0.11.0, 0.11.1 and latest matrix. The installed 0.10.3 host is checked with a dependency-free compilation probe and real plugin RPCs. These fork-specific rules override the upstream policy below.

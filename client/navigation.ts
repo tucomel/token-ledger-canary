@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { PluginSurfaceProps } from '@getpaseo/plugin/client';
-import { OVERVIEW_SCREEN, RANGE_LABELS, parseRange, type Range } from './range.ts';
+import { OVERVIEW_SCREEN, type Range } from './range.ts';
 
 // Structural types let the 0.10 compiler load this module without 0.11-only exports.
 export type OverviewScreenProps = PluginSurfaceProps & { params: Record<string, string> };
@@ -27,7 +27,7 @@ export function registerOverview(client: LegacyNavigation, components: {
   const screens = client as LegacyNavigation & Partial<ScreenNavigation>;
   if (typeof screens.addScreen === 'function' && typeof screens.addSidebarFooterItem === 'function' && typeof screens.openScreen === 'function') {
     screens.addScreen({ id: OVERVIEW_SCREEN,
-      title: params => `TokenLedger Canary · ${RANGE_LABELS[parseRange(params.range)]}`,
+      title: () => 'TokenLedger Canary Overview',
       Component: components.Screen });
     screens.addSidebarFooterItem({ id: 'ledger-today', title: 'TokenLedger Canary', Component: components.Sidebar });
     return { open: range => screens.openScreen!({ screenId: OVERVIEW_SCREEN, ...(range ? { params: { range } } : {}) }) };

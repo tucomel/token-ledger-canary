@@ -18,7 +18,7 @@ test('Paseo 0.10 registers and opens the legacy overview without calling screen 
   ]);
 });
 
-test('Paseo 0.11 keeps screen range params and the live footer instead of legacy surfaces', () => {
+test('Paseo 0.11 opens initial range params and keeps a stable title while filters change locally', () => {
   const calls: unknown[] = [];
   let title: ((params: Record<string, string>) => string) | undefined;
   const legacy = () => { throw new Error('legacy API called on a screen-capable host'); };
@@ -32,6 +32,6 @@ test('Paseo 0.11 keeps screen range params and the live footer instead of legacy
   navigation.open(); navigation.open('today');
   assert.deepEqual(calls, [['screen', 'ledger-overview'], ['footer', 'ledger-today'],
     ['open', { screenId: 'ledger-overview' }], ['open', { screenId: 'ledger-overview', params: { range: 'today' } }]]);
-  assert.equal(title!({ range: '7d' }), 'TokenLedger Canary · Last 7 days');
-  assert.equal(title!({ range: 'invalid' }), 'TokenLedger Canary · All time');
+  assert.equal(title!({ range: '7d' }), 'TokenLedger Canary Overview');
+  assert.equal(title!({ range: 'invalid' }), 'TokenLedger Canary Overview');
 });

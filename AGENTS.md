@@ -2,6 +2,8 @@
 
 ## Canary fork overrides
 
+Period buttons must update the mounted overview's local state. Never call `openScreen` for a period change: it creates navigation leaves. Route params select the initial range only; keep the header title neutral. The React interaction regression test must continue to pass on desktop and compact layouts. This overrides the upstream range navigation guidance below.
+
 The Canary fork supports Paseo >=0.10.3. Its runtime manifest omits `name`, `icon` and `media` because 0.10 rejects them. `client/navigation.ts` detects screen APIs: 0.11 uses screens/footer; 0.10 deliberately uses the legacy surface/sidebar APIs. Shared UI types must not import 0.11-only SDK exports. These compatibility overrides take precedence over the upstream 0.11-only guidance below. Verify the 0.10.3 SDK alongside the existing CI matrix before changing compatibility code.
 
 Only the exact provider ID `codex-canary` is in scope. Apply `shared/provider-scope.ts` to live collection, journal recovery, read-model history, overview totals and composer pills. Keep excluded historical records on disk; do not collect other providers or infer scope from model names or provider inheritance.

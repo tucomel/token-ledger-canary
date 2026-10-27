@@ -1,3 +1,9 @@
+# Canary 0.8.0-canary.5 (2026-10-27)
+
+- Keep period changes inside the mounted overview instead of opening another screen/leaf for each click.
+- Honor incoming screen range params as initial filters and use a stable overview title.
+- Add a React interaction regression test that clicks all periods on desktop and compact layouts.
+
 # Canary 0.8.0-canary.4 (2026-10-23)
 
 - Restore loading on Paseo 0.10.3 by removing 0.11-only runtime manifest metadata.

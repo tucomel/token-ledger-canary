@@ -1,9 +1,7 @@
 import type { PluginClientContext, PluginSurfaceProps } from "@getpaseo/plugin/client";
-import { useState } from 'react';
 import { TokenLedgerOverview } from "./client/overview.tsx";
 import { TokenLedgerPanel } from "./client/panel.tsx";
 import { contributePills } from "./client/pill.tsx";
-import type { Range } from './client/range.ts';
 import { registerOverview, type OverviewScreenProps } from './client/navigation.ts';
 import { LedgerSidebarItem } from "./client/sidebar.tsx";
 
@@ -25,11 +23,10 @@ export default function contribute(client: PluginClientContext) {
     Component: TokenLedgerPanel,
   });
   function OverviewScreen(props: OverviewScreenProps) {
-    return <TokenLedgerOverview {...props} onRange={range => navigation.open(range)} />;
+    return <TokenLedgerOverview {...props} />;
   }
   function OverviewSurface(props: PluginSurfaceProps) {
-    const [range, setRange] = useState<Range>('all');
-    return <TokenLedgerOverview {...props} params={{ range }} onRange={setRange} />;
+    return <TokenLedgerOverview {...props} params={{}} />;
   }
   const navigation = registerOverview(client, { Screen: OverviewScreen, Surface: OverviewSurface, Sidebar: LedgerSidebarItem });
   client.addCommandCenterItem({
